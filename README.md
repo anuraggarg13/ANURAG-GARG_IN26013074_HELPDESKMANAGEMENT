@@ -40,8 +40,3 @@ To run this project locally, ensure you have the following installed:
 
 6. Press **F5** to build and run the application!
 
-## 👨‍💻 Author
-
-**ANURAG GARG**
-* **GitHub:** [https://github.com/anuraggarg13](https://github.com/anuraggarg13)
-* **Project Link:** [https://github.com/anuraggarg13/HelpDeskManagement](https://github.com/anuraggarg13/HelpDeskManagement)
