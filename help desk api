@@ -1,0 +1,500 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
+
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=HelpDeskDb;Trusted_Connection=True;MultipleActiveResultSets=true"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
+
+using HelpDesk.Api.Models;
+using HelpDesk.Api.Repositories;
+using Microsoft.AspNetCore.Mvc;
+
+namespace HelpDesk.Api.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class TicketController : ControllerBase
+    {
+        private readonly ITicketRepository _repository;
+
+        public TicketController(ITicketRepository repository)
+        {
+            _repository = repository;
+        }
+
+        [HttpGet("All")]
+        public async Task<IActionResult> GetAllTickets()
+        {
+            var tickets = await _repository.GetAllTicketsAsync();
+            return Ok(tickets);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetTicketById(int id)
+        {
+            var ticket = await _repository.GetTicketByIdAsync(id);
+
+            if (ticket == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(ticket);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateTicket(Ticket ticket)
+        {
+            if (ticket == null)
+            {
+                return BadRequest();
+            }
+
+            var id = await _repository.CreateTicketAsync(ticket);
+            return Ok(id);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTicket(int id, Ticket ticket)
+        {
+            if (id != ticket.Id)
+            {
+                return BadRequest();
+            }
+
+            var existingTicket = await _repository.GetTicketByIdAsync(id);
+            if (existingTicket == null)
+            {
+                return NotFound();
+            }
+
+            await _repository.UpdateTicketAsync(ticket);
+            return Ok();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTicket(int id)
+        {
+            var existingTicket = await _repository.GetTicketByIdAsync(id);
+            if (existingTicket == null)
+            {
+                return NotFound();
+            }
+
+            await _repository.DeleteTicketAsync(id);
+            return Ok();
+        }
+
+        [HttpGet("Status/{status}")]
+        public async Task<IActionResult> GetTicketsByStatus(string status)
+        {
+            var tickets = await _repository.GetTicketsByStatusAsync(status);
+            return Ok(tickets);
+        }
+    }
+}
+using Microsoft.AspNetCore.Mvc;
+
+namespace HelpDesk.Api.Controllers
+{
+    [ApiController]
+    [Route("[controller]")]
+    public class WeatherForecastController : ControllerBase
+    {
+        private static readonly string[] Summaries =
+        [
+            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+        ];
+
+        [HttpGet(Name = "GetWeatherForecast")]
+        public IEnumerable<WeatherForecast> Get()
+        {
+            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+                TemperatureC = Random.Shared.Next(-20, 55),
+                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+            })
+            .ToArray();
+        }
+    }
+}
+
+using HelpDesk.Api.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace HelpDesk.Api.Data
+{
+    public class HelpDeskContext:DbContext
+    {
+        public HelpDeskContext(DbContextOptions<HelpDeskContext> options):base(options)
+        {
+        }
+        public DbSet<Ticket> Tickets {get;set;}
+    }
+}
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+  </ItemGroup>
+
+</Project>
+
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ActiveDebugProfile>https</ActiveDebugProfile>
+    <Controller_SelectedScaffolderID>ApiControllerEmptyScaffolder</Controller_SelectedScaffolderID>
+    <Controller_SelectedScaffolderCategoryPath>root/Common/Api</Controller_SelectedScaffolderCategoryPath>
+  </PropertyGroup>
+</Project>
+@HelpDesk.Api_HostAddress = http://localhost:5095
+
+GET {{HelpDesk.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+using System;
+using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace HelpDesk.Api.Migrations
+{
+    /// <inheritdoc />
+    public partial class InitialCreate : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.CreateTable(
+                name: "Tickets",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Priority = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RaisedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tickets", x => x.Id);
+                });
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(
+                name: "Tickets");
+        }
+    }
+}
+
+// <auto-generated />
+using System;
+using HelpDesk.Api.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+
+#nullable disable
+
+namespace HelpDesk.Api.Migrations
+{
+    [DbContext(typeof(HelpDeskContext))]
+    [Migration("20260801191026_InitialCreate")]
+    partial class InitialCreate
+    {
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("HelpDesk.Api.Models.Ticket", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RaisedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tickets");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}
+
+// <auto-generated />
+using System;
+using HelpDesk.Api.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+
+#nullable disable
+
+namespace HelpDesk.Api.Migrations
+{
+    [DbContext(typeof(HelpDeskContext))]
+    partial class HelpDeskContextModelSnapshot : ModelSnapshot
+    {
+        protected override void BuildModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("HelpDesk.Api.Models.Ticket", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RaisedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tickets");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}
+
+using System;
+
+namespace HelpDesk.Api.Models
+{
+    public class Ticket
+    {
+        public int Id { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public string Priority { get; set; }
+        public string Status { get; set; }
+        public string RaisedBy { get; set; }
+        public DateTime CreatedDate { get; set; }
+    }
+}
+using HelpDesk.Api.Data;
+using Microsoft.EntityFrameworkCore;
+using HelpDesk.Api.Repositories;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+builder.Services.AddDbContext<HelpDeskContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<ITicketRepository, TicketRepository>();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseAuthorization();
+app.MapControllers();
+app.Run();
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "http://localhost:5095",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "https://localhost:7293;http://localhost:5095",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
+using HelpDesk.Api.Models;
+
+namespace HelpDesk.Api.Repositories
+{
+    public interface ITicketRepository
+    {
+        Task<List<Ticket>> GetAllTicketsAsync();
+        Task<Ticket> GetTicketByIdAsync(int id);
+        Task<int> CreateTicketAsync(Ticket ticket);
+        Task UpdateTicketAsync(Ticket ticket);
+        Task DeleteTicketAsync(int id);
+        Task<List<Ticket>> GetTicketsByStatusAsync(string status);
+    }
+}
+using HelpDesk.Api.Data;
+using HelpDesk.Api.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace HelpDesk.Api.Repositories
+{
+    public class TicketRepository : ITicketRepository
+    {
+        private readonly HelpDeskContext _context;
+        public TicketRepository(HelpDeskContext context)
+        {
+            _context = context;
+        }
+        public async Task<List<Ticket>> GetAllTicketsAsync()
+        {
+            return await _context.Tickets.ToListAsync();
+        }
+        public async Task<Ticket> GetTicketByIdAsync(int id)
+        {
+            return await _context.Tickets.FindAsync(id);
+        }
+        public async Task<int> CreateTicketAsync(Ticket ticket)
+        {
+            _context.Tickets.Add(ticket);
+            await _context.SaveChangesAsync();
+            return ticket.Id;
+        }
+        public async Task UpdateTicketAsync(Ticket ticket)
+        {
+            _context.ChangeTracker.Clear();
+            _context.Tickets.Update(ticket);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteTicketAsync(int id)
+        {
+            var ticket = await _context.Tickets.FindAsync(id);
+            if (ticket != null)
+            {
+                _context.Tickets.Remove(ticket);
+                await _context.SaveChangesAsync();
+            }
+        }
+        public async Task<List<Ticket>> GetTicketsByStatusAsync(string status)
+        {
+            return await _context.Tickets
+                .Where(t=>t.Status==status)
+                .ToListAsync();
+        }
+    }
+}
+namespace HelpDesk.Api
+{
+    public class WeatherForecast
+    {
+        public DateOnly Date { get; set; }
+
+        public int TemperatureC { get; set; }
+
+        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+
+        public string? Summary { get; set; }
+    }
+}
