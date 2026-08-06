@@ -1,0 +1,112 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HelpDesk.Api\HelpDesk.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
+using HelpDesk.Api.Controllers;
+using HelpDesk.Api.Models;
+using HelpDesk.Api.Repositories;
+using Microsoft.AspNetCore.Mvc;
+using Moq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Xunit;
+
+namespace HelpDesk.Tests
+{
+    public class TicketControllerTests
+    {
+        private readonly Mock<ITicketRepository> _mockRepo;
+        private readonly TicketController _controller;
+
+        public TicketControllerTests()
+        {
+            _mockRepo = new Mock<ITicketRepository>();
+            _controller = new TicketController(_mockRepo.Object);
+        }
+
+        [Fact]
+        public async Task GetAllTickets_ReturnsOkResult_WhenTicketsExist()
+        {
+            var mockTickets = new List<Ticket>
+            {
+                new Ticket { Id = 1, Title = "Login Issue" },
+                new Ticket { Id = 2, Title = "Network Down" }
+            };
+            _mockRepo.Setup(repo => repo.GetAllTicketsAsync()).ReturnsAsync(mockTickets);
+            var result = await _controller.GetAllTickets();
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var returnedTickets = Assert.IsType<List<Ticket>>(okResult.Value);
+            Assert.Equal(2, returnedTickets.Count);
+        }
+        [Fact]
+        public async Task GetTicketById_ReturnsOkResult_WhenTicketExists()
+        {
+            var mockTicket = new Ticket { Id = 1, Title = "Login Issue" };
+            _mockRepo.Setup(repo => repo.GetTicketByIdAsync(1)).ReturnsAsync(mockTicket);
+            var result = await _controller.GetTicketById(1);
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var returnedTicket = Assert.IsType<Ticket>(okResult.Value);
+            Assert.Equal(1, returnedTicket.Id);
+        }
+        [Fact]
+        public async Task GetTicketById_ReturnsNotFound_WhenTicketDoesNotExist()
+        {
+            _mockRepo.Setup(repo => repo.GetTicketByIdAsync(99)).ReturnsAsync((Ticket)null!);
+            var result = await _controller.GetTicketById(99);
+            Assert.IsType<NotFoundResult>(result);
+        }
+        [Fact]
+        public async Task CreateTicket_ReturnsOkResult_WhenTicketIsCreatedSuccessfully()
+        {
+            var newTicket = new Ticket { Id = 1, Title = "New Issue" };
+            _mockRepo.Setup(repo => repo.CreateTicketAsync(newTicket)).ReturnsAsync(newTicket.Id);
+            var result = await _controller.CreateTicket(newTicket);
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal(1, okResult.Value);
+        }
+        [Fact]
+        public async Task CreateTicket_ReturnsBadRequest_WhenTicketIsNull()
+        {
+            Ticket nullTicket = null!;
+            var result = await _controller.CreateTicket(nullTicket);
+            Assert.IsType<BadRequestResult>(result);
+        }
+        [Fact]
+        public async Task GetTicketsByStatus_ReturnsOkResult_WhenMatchingTicketsExist()
+        {
+            var status = "Open";
+            var mockTickets = new List<Ticket>
+            {
+                new Ticket { Id = 1, Status = "Open" }
+            };
+            _mockRepo.Setup(repo => repo.GetTicketsByStatusAsync(status)).ReturnsAsync(mockTickets);
+            var result = await _controller.GetTicketsByStatus(status);
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var returnedTickets = Assert.IsType<List<Ticket>>(okResult.Value);
+            Assert.Single(returnedTickets);
+            Assert.Equal("Open", returnedTickets[0].Status);
+        }
+    }
+}
